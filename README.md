@@ -70,15 +70,6 @@ interface EHRResourceJson {
   aiSummary?: string;
 }
 
-interface EHRResourceMetadata {
-  state: ProcessingState;
-  createdTime: string;
-  fetchTime: string;
-  processedTime?: string;
-  identifier: EHRResourceIdentifier;
-  resourceType: string;
-  version: FHIRVersion;
-}
 ```
 
 ### Patient Archetypes
