@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package ehr_service;
+
+// Processing state enum matching TypeScript
+enum ProcessingState {
+  PROCESSING_STATE_UNSPECIFIED = 0;
+  PROCESSING_STATE_NOT_STARTED = 1;
+  PROCESSING_STATE_PROCESSING = 2;
+  PROCESSING_STATE_COMPLETED = 3;
+  PROCESSING_STATE_FAILED = 4;
+}
+
+// FHIR version enum
+enum FHIRVersion {
+  FHIR_VERSION_UNSPECIFIED = 0;
+  FHIR_VERSION_R4 = 1;
+  FHIR_VERSION_R4B = 2;
+}
+
+// Core identifier for EHR resources
+message EHRResourceIdentifier {
+  string key = 1;
+  string uid = 2;
+  string patient_id = 3;
+}
+
+// Metadata for EHR resources
+message EHRResourceMetadata {
+  ProcessingState state = 1;
+  string created_time = 2;
+  string fetch_time = 3;
+  optional string processed_time = 4;
+  EHRResourceIdentifier identifier = 5;
+  string resource_type = 6;
+  FHIRVersion version = 7;
+}
+
+// Complete EHR resource with content
+message EHRResourceJson {
+  EHRResourceMetadata metadata = 1;
+  string human_readable_str = 2;
+  optional string ai_summary = 3;
+}
+
+// Patient profile for matching
+message PatientProfile {
+  string id = 1;
+  optional string name = 2;
+  optional string email = 3;
+  bool consent_given = 4;
+  optional MatchPreferences preferences = 5;
+  string created_at = 6;
+}
+
+// Patient preferences for trial matching
+message MatchPreferences {
+  optional string preferred_location = 1;
+  optional bool willing_to_travel = 2;
+  repeated string condition_focus = 3;
+  repeated string trial_phase_preference = 4;
+  repeated string trial_type = 5;
+}
+
+// Derived clinical facts for matching
+message DerivedClinicalFacts {
+  string patient_id = 1;
+  int32 age_years = 2;
+  string sex = 3;
+  repeated Diagnosis diagnoses = 4;
+  repeated string medications = 5;
+  KeyLabs key_labs = 6;
+  repeated string exclusions = 7;
+  string location = 8;
+  string extracted_at = 9;
+}
+
+message Diagnosis {
+  string code = 1;
+  string text = 2;
+  optional string since = 3;
+}
+
+message KeyLabs {
+  optional float a1c = 1;
+  optional float egfr = 2;
+  optional float ldl = 3;
+  optional float sbp = 4;
+  optional float dbp = 5;
+}
+
+// Request/Response messages
+message GenerateEHRRequest {
+  int32 num_patients = 1;
+  int32 min_resources_per_patient = 2;
+  int32 max_resources_per_patient = 3;
+  repeated string condition_focus = 4;  // e.g., ["diabetes", "hypertension"]
+}
+
+message GetResourcesRequest {
+  optional string patient_id = 1;  // If empty, return all
+  optional ProcessingState state_filter = 2;
+  optional string resource_type_filter = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message GetResourcesResponse {
+  repeated EHRResourceJson resources = 1;
+  int32 total_count = 2;
+  bool has_more = 3;
+}
+
+message GetPatientRequest {
+  string patient_id = 1;
+}
+
+message GetDerivedFactsRequest {
+  string patient_id = 1;
+}
+
+message ProcessDocumentRequest {
+  string patient_id = 1;
+  string resource_type = 2;
+  string document_content = 3;  // Raw unstructured text
+}
+
+message ProcessDocumentResponse {
+  EHRResourceJson processed_resource = 1;
+  DerivedClinicalFacts derived_facts = 2;
+}
+
+// Main EHR service
+service EHRService {
+  // Generate mock data
+  rpc GenerateEHRData(GenerateEHRRequest) returns (GetResourcesResponse);
+  
+  // Get resources with filtering
+  rpc GetResources(GetResourcesRequest) returns (GetResourcesResponse);
+  
+  // Get specific patient profile
+  rpc GetPatient(GetPatientRequest) returns (PatientProfile);
+  
+  // Get derived clinical facts
+  rpc GetDerivedFacts(GetDerivedFactsRequest) returns (DerivedClinicalFacts);
+  
+  // Process new document (simulate document intelligence)
+  rpc ProcessDocument(ProcessDocumentRequest) returns (ProcessDocumentResponse);
+}
